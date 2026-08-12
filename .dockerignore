@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+*.md
+Unit_*
+英语二_学习单词手册.md
+English_70天Unit驱动学习系统开发提示词.md
+content-analysis-report.md
+normalized-data
+scripts
+.agents
+.codex
