@@ -1,28 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
-const mistakes = ref([
-  {
-    id: 'mistake-0001',
-    exerciseId: 'exercise-0001',
-    unitId: 'unit-01',
-    question: 'What does "abnormal" mean?',
-    userAnswer: 'normal',
-    correctAnswer: '不正常的；反常的',
-    wrongCount: 2,
-    status: 'unresolved'
-  },
-  {
-    id: 'mistake-0002',
-    exerciseId: 'exercise-0002',
-    unitId: 'unit-02',
-    question: 'Complete: "He had been trying to remove a bottle of milk from the refrigerator when he lost his _____ on the slippery bottle."',
-    userAnswer: 'hold',
-    correctAnswer: 'grip',
-    wrongCount: 1,
-    status: 'reviewing'
-  }
-])
+interface Mistake {
+  id: string
+  question: string
+  userAnswer: string
+  correctAnswer: string
+  wrongCount: number
+  status: 'unresolved' | 'reviewing' | 'resolved'
+  date: string
+}
+
+const mistakes = ref<Mistake[]>([])
+
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem('mistakes')
+    if (saved) {
+      mistakes.value = JSON.parse(saved)
+    }
+  } catch (e) { /* ignore */ }
+})
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -51,7 +49,7 @@ const getStatusText = (status: string) => {
     <div class="mistakes-list">
       <div v-for="mistake in mistakes" :key="mistake.id" class="mistake-card">
         <div class="mistake-header">
-          <span class="mistake-unit">{{ mistake.unitId }}</span>
+          <span class="mistake-date">{{ mistake.date }}</span>
           <span
             class="mistake-status"
             :style="{ color: getStatusColor(mistake.status) }"
@@ -123,7 +121,7 @@ h2 {
   margin-bottom: 15px;
 }
 
-.mistake-unit {
+.mistake-date {
   font-size: 0.9rem;
   color: #888;
 }

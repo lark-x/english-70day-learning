@@ -1,46 +1,55 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import contentData from '../../data/content.json'
 
 const activeTab = ref('words')
+const searchQuery = ref('')
+const currentPage = ref(1)
+const pageSize = 20
 
 const tabs = [
-  { id: 'words', label: '单词' },
-  { id: 'phrases', label: '短语' },
-  { id: 'sentences', label: '句子' },
-  { id: 'units', label: '单元' },
+  { id: 'words', label: `单词 (${contentData.words.length})` },
+  { id: 'phrases', label: `短语 (${contentData.phrases.length})` },
+  { id: 'units', label: `单元 (${contentData.units.length})` },
 ]
 
-// Sample data
-const words = ref([
-  { id: 'word-0001', word: 'able-bodied', phonetic: '/ˌeɪbl ˈbɒdɪd/', translation: '健康的；健壮的' },
-  { id: 'word-0002', word: 'abnormal', phonetic: '/æbˈnɔːrml/', translation: '不正常的；反常的' },
-  { id: 'word-0003', word: 'absolute', phonetic: '/ˈæbsəluːt/', translation: '肯定的；无疑的' },
-])
+const words = contentData.words
+const phrases = contentData.phrases
+const units = contentData.units
 
-const phrases = ref([
-  { id: 'phrase-0001', phrase: 'a multitude of', translation: '众多的；大量的' },
-  { id: 'phrase-0002', phrase: 'a series of', translation: '一系列；连续' },
-])
+const filteredWords = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  if (!q) return words
+  return words.filter(w => w.word.toLowerCase().includes(q) || (w.translation && w.translation.includes(q)))
+})
 
-const sentences = ref([
-  {
-    id: 'sentence-0001',
-    en: 'In either case, you must recognize and take into account any differences.',
-    zh: '不论哪种情况，你必须注意并考虑任何差异。'
-  }
-])
+const filteredPhrases = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  if (!q) return phrases
+  return phrases.filter(p => p.phrase.toLowerCase().includes(q) || (p.translation && p.translation.includes(q)))
+})
 
-const units = ref([
-  { id: 'unit-01', title: 'The Power of Language' },
-  { id: 'unit-02', title: 'Mistakes to Success' },
-  { id: 'unit-03', title: 'Friendship and Loyalty' },
-])
+const paginatedWords = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredWords.value.slice(start, start + pageSize)
+})
+
+const totalWordPages = computed(() => Math.ceil(filteredWords.value.length / pageSize))
+
+const paginatedPhrases = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredPhrases.value.slice(start, start + pageSize)
+})
+
+const totalPhrasePages = computed(() => Math.ceil(filteredPhrases.value.length / pageSize))
+
+function resetPage() { currentPage.value = 1 }
 </script>
 
 <template>
   <div class="materials-view">
     <h2>资料库</h2>
-    <p class="subtitle">浏览所有学习内容</p>
+    <p class="subtitle">浏览全部学习内容</p>
 
     <!-- Tabs -->
     <div class="tabs">
@@ -48,42 +57,55 @@ const units = ref([
         v-for="tab in tabs"
         :key="tab.id"
         :class="['tab-button', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
+        @click="activeTab = tab.id; resetPage()"
       >
         {{ tab.label }}
       </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="搜索单词或短语..."
+        @input="resetPage"
+      />
     </div>
 
     <!-- Content -->
     <div class="content">
       <!-- Words -->
       <div v-if="activeTab === 'words'" class="tab-content">
+        <p class="result-count">共 {{ filteredWords.length }} 个单词</p>
         <div class="word-grid">
-          <div v-for="word in words" :key="word.id" class="word-card">
+          <div v-for="word in paginatedWords" :key="word.word" class="word-card">
             <div class="word-english">{{ word.word }}</div>
             <div class="word-phonetic">{{ word.phonetic }}</div>
             <div class="word-translation">{{ word.translation }}</div>
+            <div v-if="word.partOfSpeech" class="word-pos">{{ word.partOfSpeech }}</div>
           </div>
+        </div>
+        <div v-if="totalWordPages > 1" class="pagination">
+          <button :disabled="currentPage <= 1" @click="currentPage--">上一页</button>
+          <span>{{ currentPage }} / {{ totalWordPages }}</span>
+          <button :disabled="currentPage >= totalWordPages" @click="currentPage++">下一页</button>
         </div>
       </div>
 
       <!-- Phrases -->
       <div v-if="activeTab === 'phrases'" class="tab-content">
+        <p class="result-count">共 {{ filteredPhrases.length }} 个短语</p>
         <div class="phrase-list">
-          <div v-for="phrase in phrases" :key="phrase.id" class="phrase-card">
+          <div v-for="phrase in paginatedPhrases" :key="phrase.phrase" class="phrase-card">
             <div class="phrase-english">{{ phrase.phrase }}</div>
             <div class="phrase-translation">{{ phrase.translation }}</div>
           </div>
         </div>
-      </div>
-
-      <!-- Sentences -->
-      <div v-if="activeTab === 'sentences'" class="tab-content">
-        <div class="sentence-list">
-          <div v-for="sentence in sentences" :key="sentence.id" class="sentence-card">
-            <div class="sentence-en">{{ sentence.en }}</div>
-            <div class="sentence-zh">{{ sentence.zh }}</div>
-          </div>
+        <div v-if="totalPhrasePages > 1" class="pagination">
+          <button :disabled="currentPage <= 1" @click="currentPage--">上一页</button>
+          <span>{{ currentPage }} / {{ totalPhrasePages }}</span>
+          <button :disabled="currentPage >= totalPhrasePages" @click="currentPage++">下一页</button>
         </div>
       </div>
 
@@ -91,8 +113,11 @@ const units = ref([
       <div v-if="activeTab === 'units'" class="tab-content">
         <div class="unit-list">
           <div v-for="unit in units" :key="unit.id" class="unit-card">
-            <div class="unit-id">{{ unit.id }}</div>
+            <div class="unit-id">Unit {{ unit.unitNum }}</div>
             <div class="unit-title">{{ unit.title }}</div>
+            <div v-if="unit.sentences && unit.sentences.length" class="unit-meta">
+              {{ unit.sentences.length }} 个核心句型
+            </div>
           </div>
         </div>
       </div>
@@ -216,5 +241,74 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 15px;
+}
+
+.search-bar {
+  margin-bottom: 20px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+  border-color: #4CAF50;
+}
+
+.result-count {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.word-pos {
+  display: inline-block;
+  background: #e8f5e9;
+  color: #4CAF50;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-top: 5px;
+}
+
+.unit-meta {
+  color: #888;
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+  padding: 15px 0;
+}
+
+.pagination button {
+  padding: 8px 20px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

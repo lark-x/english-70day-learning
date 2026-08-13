@@ -1,40 +1,39 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import contentData from '../../data/content.json'
 
 const currentDay = ref(1)
 const isLoading = ref(true)
 
-// Sample data - in real app, this would come from the plan
-const todayWords = ref([
-  { id: 'word-0001', word: 'able-bodied', translation: '健康的；健壮的' },
-  { id: 'word-0002', word: 'abnormal', translation: '不正常的；反常的' },
-  { id: 'word-0003', word: 'absolute', translation: '肯定的；无疑的' },
-])
+const totalDays = 70
+const wordsPerDay = Math.ceil(contentData.words.length / totalDays)
+const phrasesPerDay = Math.ceil(contentData.phrases.length / totalDays)
 
-const todayPhrases = ref([
-  { id: 'phrase-0001', phrase: 'a multitude of', translation: '众多的；大量的' },
-  { id: 'phrase-0002', phrase: 'a series of', translation: '一系列；连续' },
-])
+const todayWords = computed(() => {
+  const start = (currentDay.value - 1) * wordsPerDay
+  return contentData.words.slice(start, start + wordsPerDay)
+})
 
-const todaySentences = ref([
-  {
-    id: 'sentence-0001',
-    en: 'In either case, you must recognize and take into account any differences.',
-    zh: '不论哪种情况，你必须注意并考虑任何差异。'
-  }
-])
+const todayPhrases = computed(() => {
+  const start = (currentDay.value - 1) * phrasesPerDay
+  return contentData.phrases.slice(start, start + phrasesPerDay)
+})
+
+// Rotate units: each day focuses on one unit's sentences
+const currentUnit = computed(() => {
+  const unitIndex = (currentDay.value - 1) % contentData.units.length
+  return contentData.units[unitIndex]
+})
 
 onMounted(() => {
-  // Load current day from storage
   const savedDay = localStorage.getItem('currentDay')
   if (savedDay) {
-    currentDay.value = parseInt(savedDay)
+    currentDay.value = Math.min(parseInt(savedDay), totalDays)
   }
   isLoading.value = false
 })
 
 const completeDay = () => {
-  // Save progress
   localStorage.setItem('currentDay', String(currentDay.value + 1))
   currentDay.value++
   alert(`Day ${currentDay.value - 1} 完成！明天继续 Day ${currentDay.value}`)
@@ -44,7 +43,7 @@ const completeDay = () => {
 <template>
   <div class="today-view">
     <div class="day-header">
-      <h2>Day {{ currentDay }} / 70</h2>
+      <h2>Day {{ currentDay }} / {{ totalDays }}</h2>
       <p class="subtitle">今日学习内容</p>
     </div>
 
@@ -53,10 +52,11 @@ const completeDay = () => {
     <div v-else class="content-sections">
       <!-- Words Section -->
       <section class="content-section">
-        <h3>📚 新单词 ({{ todayWords.length }})</h3>
+        <h3>📚 今日单词 ({{ todayWords.length }})</h3>
         <div class="word-list">
-          <div v-for="word in todayWords" :key="word.id" class="word-card">
+          <div v-for="word in todayWords" :key="word.word" class="word-card">
             <div class="word-english">{{ word.word }}</div>
+            <span v-if="word.phonetic" class="word-phonetic">{{ word.phonetic }}</span>
             <div class="word-translation">{{ word.translation }}</div>
           </div>
         </div>
@@ -64,23 +64,26 @@ const completeDay = () => {
 
       <!-- Phrases Section -->
       <section class="content-section">
-        <h3>📝 新短语 ({{ todayPhrases.length }})</h3>
+        <h3>📝 今日短语 ({{ todayPhrases.length }})</h3>
         <div class="phrase-list">
-          <div v-for="phrase in todayPhrases" :key="phrase.id" class="phrase-card">
+          <div v-for="phrase in todayPhrases" :key="phrase.phrase" class="phrase-card">
             <div class="phrase-english">{{ phrase.phrase }}</div>
             <div class="phrase-translation">{{ phrase.translation }}</div>
           </div>
         </div>
       </section>
 
-      <!-- Sentences Section -->
+      <!-- Unit Sentences Section -->
       <section class="content-section">
-        <h3>📖 核心句型 ({{ todaySentences.length }})</h3>
+        <h3>📖 Unit {{ currentUnit.unitNum }} - {{ currentUnit.title }}</h3>
         <div class="sentence-list">
-          <div v-for="sentence in todaySentences" :key="sentence.id" class="sentence-card">
+          <div v-for="(sentence, idx) in (currentUnit.sentences || []).slice(0, 5)" :key="idx" class="sentence-card">
             <div class="sentence-en">{{ sentence.en }}</div>
             <div class="sentence-zh">{{ sentence.zh }}</div>
           </div>
+          <p v-if="!currentUnit.sentences || currentUnit.sentences.length === 0" class="no-data">
+            暂无核心句型
+          </p>
         </div>
       </section>
 
@@ -163,6 +166,18 @@ const completeDay = () => {
 .word-translation, .phrase-translation {
   color: #666;
   font-size: 0.95rem;
+}
+
+.word-phonetic {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.no-data {
+  color: #999;
+  text-align: center;
+  padding: 20px;
 }
 
 .sentence-en {

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import contentData from '../../data/content.json'
 
 const currentDay = ref(1)
 const totalDays = 70
-const progress = ref(0)
+
+const progress = computed(() => (currentDay.value / totalDays) * 100)
 
 onMounted(() => {
-  // Load progress from storage
   const savedDay = localStorage.getItem('currentDay')
   if (savedDay) {
-    currentDay.value = parseInt(savedDay)
-    progress.value = (currentDay.value / totalDays) * 100
+    currentDay.value = Math.min(parseInt(savedDay), totalDays)
   }
 })
 </script>
@@ -43,15 +43,15 @@ onMounted(() => {
 
     <div class="stats-section">
       <div class="stat-card">
-        <div class="stat-number">760</div>
+        <div class="stat-number">{{ contentData.words.length }}</div>
         <div class="stat-label">总单词</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">168</div>
+        <div class="stat-number">{{ contentData.phrases.length }}</div>
         <div class="stat-label">总短语</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">12</div>
+        <div class="stat-number">{{ contentData.units.length }}</div>
         <div class="stat-label">学习单元</div>
       </div>
     </div>
