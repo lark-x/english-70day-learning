@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build/parse-content.js && vue-tsc && vite build",
+    "build": "vue-tsc && vite build",
     "parse": "node scripts/build/parse-content.js",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
